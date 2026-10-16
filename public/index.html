@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RentSync – Property Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style type="text/tailwindcss">
+  .inp{@apply w-full border border-slate-300 rounded px-3 py-2 text-sm}
+  .btn{@apply bg-indigo-600 text-white rounded px-3 py-2 text-sm hover:bg-indigo-700}
+  .btn-s{@apply border border-slate-300 rounded px-2 py-1 text-xs hover:bg-slate-100}
+  .card{@apply bg-white rounded-xl shadow p-4}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<div id="public" class="hidden">
+  <header class="bg-white shadow px-4 py-3 flex flex-wrap items-center gap-3">
+    <b class="text-lg">🏠 RentSync</b>
+    <nav class="flex gap-1 text-sm">
+      <button class="px-3 py-1 rounded hover:bg-slate-100" onclick="pubTab('home')">Home</button>
+      <button class="px-3 py-1 rounded hover:bg-slate-100" onclick="pubTab('rentals')">Rentals</button>
+    </nav>
+    <div class="ml-auto flex items-center gap-2">
+      <div id="contactWrap" class="relative">
+        <button class="btn-s !text-sm !px-3 !py-2" onclick="toggleContact()">Contact ▾</button>
+        <div id="contactPanel" class="hidden absolute right-0 mt-2 w-96 max-w-[92vw] z-30 bg-white rounded-xl shadow-lg border border-slate-200 p-4 text-left">
+          <h3 class="font-semibold mb-2">Contact me</h3>
+          <p class="text-sm">📧 <a id="cEmail" class="text-indigo-600 underline"></a></p>
+          <p class="text-sm mb-3">📞 <a id="cPhone" class="text-indigo-600 underline"></a></p>
+          <p class="text-xs font-medium text-slate-500 mb-1">Suggested email — fill in the blanks (____)</p>
+          <input id="cSubject" class="inp mb-2">
+          <textarea id="cBody" rows="15" class="inp mb-2 font-mono text-xs"></textarea>
+          <div class="flex gap-2"><button class="btn flex-1" onclick="openMail()">Open in email app</button><button id="copyBtn" class="btn-s" onclick="copyMail()">Copy</button></div>
+        </div>
+      </div>
+      <button class="btn" onclick="showLogin()">Login</button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-4">
+    <section id="pub-home">
+      <div class="rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-8 md:p-12 my-4">
+        <h1 class="text-3xl md:text-4xl font-bold">Find your next home</h1>
+        <p class="mt-2 text-indigo-100 max-w-xl">Browse available rentals, report maintenance issues and book amenities — all in one place, updated in real time.</p>
+        <p class="mt-4 text-lg"><b id="pubCount">0</b> homes available right now</p>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button class="bg-white text-indigo-700 rounded px-4 py-2 text-sm font-medium" onclick="pubTab('rentals')">View available rentals</button>
+          <button class="border border-white rounded px-4 py-2 text-sm" onclick="showLogin()">Login / Register</button>
+        </div>
+      </div>
+      <h2 class="font-semibold mb-2">Latest available</h2>
+      <div id="pubFeatured" class="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6"></div>
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="card"><b>🔧 Live maintenance tracking</b><p class="text-sm text-slate-500 mt-1">Report an issue and watch it move from Pending to Completed.</p></div>
+        <div class="card"><b>📅 Conflict-free amenity booking</b><p class="text-sm text-slate-500 mt-1">Gym, pool or hall — no double bookings, with check-in and check-out.</p></div>
+        <div class="card"><b>🤝 Transparent communication</b><p class="text-sm text-slate-500 mt-1">Tenants, staff and owners see the same up-to-date status.</p></div>
+      </div>
+    </section>
+    <section id="pub-rentals" class="hidden">
+      <h2 class="font-semibold mb-2">Available to rent</h2>
+      <div id="pubAll" class="grid sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </section>
+  </main>
+</div>
+
+<div id="auth" class="hidden max-w-sm mx-auto mt-16 card p-6">
+  <h1 class="text-2xl font-bold">🏠 RentSync</h1>
+  <p id="authTitle" class="text-sm text-slate-500 mb-4">Sign in</p>
+  <input id="name" class="inp mb-3 hidden" placeholder="Full name">
+  <input id="email" class="inp mb-3" placeholder="Email" type="email">
+  <input id="password" class="inp mb-3" placeholder="Password" type="password">
+  <p id="authErr" class="text-red-600 text-sm mb-2"></p>
+  <button id="authBtn" class="btn w-full" onclick="submitAuth()">Sign in</button>
+  <button id="switch" class="text-sm text-indigo-600 mt-3 underline" onclick="setMode(mode==='login'?'register':'login')">New tenant? Create account</button>
+  <p class="text-xs text-slate-400 mt-4">Demo: owner@demo.com / staff@demo.com / tenant@demo.com — password123</p>
+  <button class="text-sm text-slate-500 underline mt-3 block" onclick="showHome()">← Back to home</button>
+</div>
+
+<div id="app" class="hidden">
+  <header class="bg-white shadow px-4 py-3 flex flex-wrap items-center gap-3">
+    <b class="text-lg">🏠 RentSync</b>
+    <nav id="tabs" class="flex gap-1 text-sm"></nav>
+    <div class="ml-auto text-sm flex items-center gap-2">
+      <span id="live" class="w-2 h-2 rounded-full bg-red-500" title="Real-time connection"></span>
+      <span id="who"></span><button class="underline" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-4">
+    <section id="tab-dashboard"></section>
+
+    <section id="tab-maintenance" class="hidden grid md:grid-cols-3 gap-4">
+      <div class="card h-fit">
+        <h2 class="font-semibold mb-3">New maintenance request</h2>
+        <select id="mProp" class="inp mb-2"></select>
+        <input id="mTitle" class="inp mb-2" placeholder="Issue title">
+        <textarea id="mDesc" class="inp mb-2" rows="3" placeholder="Describe the issue"></textarea>
+        <select id="mPri" class="inp mb-2"><option>Low</option><option selected>Medium</option><option>High</option></select>
+        <p id="mErr" class="text-red-600 text-sm mb-2"></p>
+        <button class="btn w-full" onclick="createRequest()">Submit request</button>
+      </div>
+      <div id="mList" class="md:col-span-2 space-y-3"></div>
+    </section>
+
+    <section id="tab-amenities" class="hidden space-y-4">
+      <div id="ownerAmen" class="hidden card">
+        <h2 class="font-semibold mb-3">Add amenity to a property</h2>
+        <div class="grid sm:grid-cols-5 gap-2 items-end">
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">Property</label><select id="aProp" class="inp"></select></div>
+          <div><label class="text-xs text-slate-500">Amenity name</label><input id="aName" class="inp" placeholder="e.g. Gym"></div>
+          <div><label class="text-xs text-slate-500">Opens</label><input id="aOpen" type="time" class="inp" value="06:00"></div>
+          <div><label class="text-xs text-slate-500">Closes</label><input id="aClose" type="time" class="inp" value="22:00"></div>
+        </div>
+        <p id="aErr" class="text-red-600 text-sm my-2"></p>
+        <button class="btn" onclick="addAmenity()">Add amenity</button>
+      </div>
+      <div id="aList" class="grid sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="card h-fit">
+          <h2 class="font-semibold mb-3">Book an amenity</h2>
+          <select id="bAmenity" class="inp mb-2" onchange="loadSlots()"></select>
+          <input id="bDate" type="date" class="inp mb-2" onchange="loadSlots()">
+          <div class="flex gap-2 mb-2"><input id="bStart" type="time" class="inp" value="10:00"><input id="bEnd" type="time" class="inp" value="11:00"></div>
+          <p id="slots" class="text-xs text-slate-500 mb-2"></p>
+          <p id="bErr" class="text-red-600 text-sm mb-2"></p>
+          <button class="btn w-full" onclick="book()">Book slot</button>
+        </div>
+        <div id="bList" class="md:col-span-2 space-y-3"></div>
+      </div>
+    </section>
+    <section id="tab-rentals" class="hidden space-y-4">
+      <div id="ownerRent" class="hidden grid md:grid-cols-3 gap-4">
+        <div class="card h-fit">
+          <h2 class="font-semibold mb-3">Add property</h2>
+          <input id="pName" class="inp mb-2" placeholder="Property name">
+          <input id="pAddr" class="inp mb-2" placeholder="Address">
+          <p id="pErr" class="text-red-600 text-sm mb-2"></p>
+          <button class="btn w-full" onclick="addProperty()">Add property</button>
+        </div>
+        <div class="card h-fit">
+          <h2 class="font-semibold mb-3">Add rentable unit</h2>
+          <select id="nProp" class="inp mb-2"></select>
+          <div class="flex gap-2 mb-2"><input id="nName" class="inp" placeholder="Unit (e.g. A-102)"><input id="nRent" type="number" min="1" class="inp" placeholder="Rent ₹/month"></div>
+          <p id="nErr" class="text-red-600 text-sm mb-2"></p>
+          <button class="btn w-full" onclick="addUnit()">Add unit</button>
+        </div>
+        <div class="card">
+          <h2 class="font-semibold mb-3">Create rental (assign tenant)</h2>
+          <select id="rProp" class="inp mb-2" onchange="fillUnitSelect(true)"></select>
+          <select id="rTenant" class="inp mb-2"></select>
+          <select id="rUnit" class="inp mb-2" onchange="pickUnit()"></select>
+          <input id="rRent" type="number" min="1" class="inp mb-2" placeholder="Monthly rent ₹ (auto-filled from unit)">
+          <div class="flex gap-2 mb-2"><input id="rStart" type="date" class="inp" title="Start date"><input id="rEnd" type="date" class="inp" title="End date (optional)"></div>
+          <p id="rErr" class="text-red-600 text-sm mb-2"></p>
+          <button class="btn w-full" onclick="addRental()">Create rental</button>
+        </div>
+      </div>
+      <h2 class="font-semibold">Available to rent</h2>
+      <div id="vList" class="grid sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+      <h2 id="rHead" class="font-semibold">Rentals</h2>
+      <div id="rList" class="space-y-3"></div>
+    </section>
+
+    <section id="tab-users" class="hidden grid md:grid-cols-3 gap-4">
+      <div class="card h-fit">
+        <h2 class="font-semibold mb-3">Add staff or tenant</h2>
+        <input id="uName" class="inp mb-2" placeholder="Full name">
+        <input id="uEmail" class="inp mb-2" type="email" placeholder="Email">
+        <input id="uPass" class="inp mb-2" type="password" placeholder="Temporary password (6+ chars)">
+        <select id="uRole" class="inp mb-2"><option value="tenant">Tenant</option><option value="staff">Staff</option></select>
+        <p id="uErr" class="text-red-600 text-sm mb-2"></p>
+        <button class="btn w-full" onclick="addUser()">Add user</button>
+      </div>
+      <div id="uList" class="md:col-span-2 space-y-3"></div>
+    </section>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const colors = { Pending: 'bg-amber-100 text-amber-800', 'In Progress': 'bg-blue-100 text-blue-800', Completed: 'bg-green-100 text-green-800',
+  Booked: 'bg-indigo-100 text-indigo-800', 'Checked-In': 'bg-blue-100 text-blue-800', 'Checked-Out': 'bg-green-100 text-green-800',
+  Cancelled: 'bg-slate-200 text-slate-600', Active: 'bg-green-100 text-green-800', Ended: 'bg-slate-200 text-slate-600', Available: 'bg-green-100 text-green-800', Unavailable: 'bg-red-100 text-red-800' };
+const badge = (s) => `<span class="text-xs px-2 py-0.5 rounded-full ${colors[s]}">${s}</span>`;
+const fmt = (d) => (d ? new Date(d).toLocaleString() : '—');
+let token = localStorage.token, user = JSON.parse(localStorage.user || 'null'), mode = 'login';
+
+async function api(path, opts = {}) {
+  const r = await fetch('/api' + path, { method: opts.method || 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const d = await r.json();
+  if (!r.ok) { if (r.status === 401 && token) logout(); throw new Error(d.error || 'Something went wrong'); }
+  return d;
+}
+
+/* ---- Auth ---- */
+function setMode(m) {
+  mode = m; const login = m === 'login';
+  $('#name').classList.toggle('hidden', login);
+  $('#authTitle').textContent = login ? 'Sign in' : 'Create tenant account';
+  $('#authBtn').textContent = login ? 'Sign in' : 'Register';
+  $('#switch').textContent = login ? 'New tenant? Create account' : 'Have an account? Sign in';
+}
+async function submitAuth() {
+  try {
+    const d = await api('/auth/' + mode, { method: 'POST', body: { name: $('#name').value, email: $('#email').value, password: $('#password').value } });
+    token = localStorage.token = d.token; user = d.user; localStorage.user = JSON.stringify(user); start();
+  } catch (e) { $('#authErr').textContent = e.message; }
+}
+function logout() { localStorage.clear(); location.reload(); }
+
+/* ---- App shell ---- */
+const staffLike = () => user.role !== 'tenant';
+function show(t) {
+  ['dashboard', 'maintenance', 'amenities', 'rentals', 'users'].forEach((x) => $('#tab-' + x).classList.toggle('hidden', x !== t));
+}
+async function start() {
+  $('#auth').classList.add('hidden'); $('#public').classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#who').textContent = `${user.name} (${user.role})`;
+  $('#tabs').innerHTML = (user.role === 'owner' ? ['dashboard', 'maintenance', 'amenities', 'rentals', 'users'] : ['dashboard', 'maintenance', 'amenities', 'rentals']).map((t) => `<button class="px-3 py-1 rounded hover:bg-slate-100 capitalize" onclick="show('${t}')">${t}</button>`).join('');
+  $('#bDate').value = new Date().toLocaleDateString('en-CA');
+  show('dashboard');
+  $('#rStart').value = $('#bDate').value;
+  if (user.role === 'owner') $('#ownerRent').classList.remove('hidden');
+  if (user.role === 'owner') $('#ownerAmen').classList.remove('hidden');
+  $('#rHead').textContent = user.role === 'tenant' ? 'My rentals' : 'All rentals';
+  const s = io();
+  s.on('connect', () => $('#live').className = 'w-2 h-2 rounded-full bg-green-500');
+  s.on('disconnect', () => $('#live').className = 'w-2 h-2 rounded-full bg-red-500');
+  s.on('update', refresh); // real-time: server pushes an event whenever data changes
+  refresh();
+}
+async function refresh() {
+  try { await Promise.all([loadProps(), loadDash(), loadMaint(), loadAmenities(), loadBookings(), loadRentals(), loadUnits(), ...(user.role === 'owner' ? [loadUsers()] : [])]); loadSlots(); } catch (e) { console.error(e); }
+}
+
+/* ---- Dashboard ---- */
+async function loadDash() {
+  const d = await api('/dashboard'), m = d.maintenance, mine = user.role === 'tenant' ? (await api('/rentals')).filter((r) => r.status === 'Active') : [];
+  const stat = (label, v, sub = '') => `<div class="card"><div class="text-sm text-slate-500">${label}</div><div class="text-3xl font-bold">${v}</div><div class="text-xs text-slate-400">${sub}</div></div>`;
+  const max = Math.max(1, ...d.usage.map((u) => u.n));
+  $('#tab-dashboard').innerHTML = `
+    ${myHome(mine)}
+    ${user.role !== 'tenant' ? `<h2 class="font-semibold mb-2">Rental overview</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">${stat('Active rentals', d.activeRentals)}${stat('Monthly rent roll', money(d.monthlyRent))}</div>` : ''}
+    <h2 class="font-semibold mb-2">Maintenance overview</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      ${stat('Pending', m.Pending)}${stat('In progress', m['In Progress'])}${stat('Completed', m.Completed)}
+      ${stat('Completion rate', d.completionRate + '%', 'Target ≥ 90%')}
+      ${stat('Avg resolution', d.avgResolutionHours + ' h', 'Target ≤ 48 h')}
+    </div>
+    <h2 class="font-semibold mb-2">Amenity usage overview</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      ${stat('Amenities available', `${d.amenitiesAvailable}/${d.amenitiesTotal}`)}${stat('Bookings today', d.bookingsToday)}${stat('In use now', d.inUseNow)}
+    </div>
+    <div class="card"><h3 class="text-sm font-medium mb-2">Total bookings by amenity</h3>
+      ${d.usage.map((u) => `<div class="flex items-center gap-2 text-sm mb-1"><span class="w-32">${esc(u.name)}</span><div class="bg-indigo-500 h-3 rounded" style="width:${(u.n / max) * 100}%"></div><span>${u.n}</span></div>`).join('') || '<p class="text-sm text-slate-400">No bookings yet</p>'}
+    </div>`;
+}
+
+/* ---- Maintenance ---- */
+async function createRequest() {
+  try {
+    await api('/maintenance', { method: 'POST', body: { propertyId: $('#mProp').value, title: $('#mTitle').value, description: $('#mDesc').value, priority: $('#mPri').value } });
+    $('#mTitle').value = $('#mDesc').value = $('#mErr').textContent = ''; refresh();
+  } catch (e) { $('#mErr').textContent = e.message; }
+}
+async function setStatus(id, status) { await api(`/maintenance/${id}/status`, { method: 'PATCH', body: { status } }); }
+async function loadMaint() {
+  const list = await api('/maintenance');
+  $('#mList').innerHTML = list.map((r) => `
+    <div class="card">
+      <div class="flex justify-between gap-2"><b>${esc(r.title)}</b>${badge(r.status)}</div>
+      <p class="text-sm mt-1">${esc(r.description)}</p>
+      <p class="text-xs text-slate-500 mt-2">${esc(r.property?.name)} · by ${esc(r.createdBy?.name)} · ${esc(r.priority)} priority<br>Created ${fmt(r.createdAt)} · Resolved ${fmt(r.resolutionDate)}</p>
+      ${staffLike() ? `<select class="inp mt-2 !w-auto" onchange="setStatus('${r._id}', this.value)">${['Pending', 'In Progress', 'Completed'].map((s) => `<option ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : ''}
+    </div>`).join('') || '<p class="text-slate-500">No maintenance requests yet.</p>';
+}
+
+/* ---- Amenities & bookings ---- */
+async function addAmenity() {
+  try {
+    await api('/amenities', { method: 'POST', body: { propertyId: $('#aProp').value, name: $('#aName').value, openTime: $('#aOpen').value, closeTime: $('#aClose').value } });
+    $('#aName').value = $('#aErr').textContent = '';
+  } catch (e) { $('#aErr').textContent = e.message; }
+}
+async function removeAmenity(id) {
+  if (confirm('Remove this amenity? Upcoming bookings for it will be cancelled.')) try { await api('/amenities/' + id, { method: 'DELETE' }); } catch (e) { alert(e.message); }
+}
+async function setAmenity(id, availabilityStatus) { await api('/amenities/' + id, { method: 'PATCH', body: { availabilityStatus } }); }
+async function loadAmenities() {
+  const list = await api('/amenities'), sel = $('#bAmenity').value;
+  $('#aList').innerHTML = list.map((a) => `
+    <div class="card"><b>${esc(a.name)}</b> <div class="my-1">${badge(a.availabilityStatus)}</div>
+      <p class="text-xs text-slate-500">${esc(a.property?.name)}<br>Open ${a.openTime}–${a.closeTime}</p>
+      ${user.role === 'owner' ? `<button class="btn-s mt-2" onclick="setAmenity('${a._id}','${a.availabilityStatus === 'Available' ? 'Unavailable' : 'Available'}')">Mark ${a.availabilityStatus === 'Available' ? 'unavailable' : 'available'}</button> <button class="btn-s mt-2 text-red-600" onclick="removeAmenity('${a._id}')">Remove</button>` : ''}
+    </div>`).join('');
+  $('#bAmenity').innerHTML = list.filter((a) => a.availabilityStatus === 'Available').map((a) => `<option value="${a._id}">${esc(a.name)}</option>`).join('');
+  if (sel) $('#bAmenity').value = sel;
+}
+async function loadSlots() {
+  if (!$('#bAmenity').value || !$('#bDate').value) return ($('#slots').textContent = '');
+  const s = await api(`/amenities/${$('#bAmenity').value}/slots?date=${$('#bDate').value}`);
+  $('#slots').textContent = s.length ? 'Already booked: ' + s.map((x) => `${x.startTime}–${x.endTime}`).join(', ') : 'No bookings on this date yet.';
+}
+async function book() {
+  try {
+    await api('/bookings', { method: 'POST', body: { amenityId: $('#bAmenity').value, date: $('#bDate').value, startTime: $('#bStart').value, endTime: $('#bEnd').value } });
+    $('#bErr').textContent = ''; refresh();
+  } catch (e) { $('#bErr').textContent = e.message; }
+}
+async function act(id, action) { try { await api(`/bookings/${id}/${action}`, { method: 'POST' }); } catch (e) { alert(e.message); } }
+async function loadBookings() {
+  const list = await api('/bookings');
+  $('#bList').innerHTML = list.map((b) => `
+    <div class="card flex flex-wrap items-center justify-between gap-2">
+      <div><b>${esc(b.amenity?.name || 'Removed amenity')}</b> ${badge(b.status)}
+        <p class="text-sm">${b.date} · ${b.startTime}–${b.endTime} · ${esc(b.user?.name)}</p>
+        <p class="text-xs text-slate-500">Check-in: ${fmt(b.checkInAt)} · Check-out: ${fmt(b.checkOutAt)}</p></div>
+      <div class="flex gap-2">
+        ${b.status === 'Booked' ? `<button class="btn-s" onclick="act('${b._id}','checkin')">Check in</button><button class="btn-s" onclick="act('${b._id}','cancel')">Cancel</button>` : ''}
+        ${b.status === 'Checked-In' ? `<button class="btn-s" onclick="act('${b._id}','checkout')">Check out</button>` : ''}
+      </div>
+    </div>`).join('') || '<p class="text-slate-500">No bookings yet.</p>';
+}
+
+/* ---- Properties, rentals & users ---- */
+const money = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+async function loadProps() {
+  const props = await api('/properties');
+  ['#mProp', '#rProp', '#nProp', '#aProp'].forEach((id) => {
+    const v = $(id).value;
+    $(id).innerHTML = props.map((p) => `<option value="${p._id}">${esc(p.name)}</option>`).join('') || '<option value="">No property assigned yet</option>';
+    if (v) $(id).value = v;
+  });
+  fillUnitSelect();
+}
+async function addProperty() {
+  try { await api('/properties', { method: 'POST', body: { name: $('#pName').value, address: $('#pAddr').value } }); $('#pName').value = $('#pAddr').value = $('#pErr').textContent = ''; }
+  catch (e) { $('#pErr').textContent = e.message; }
+}
+function myHome(mine) {
+  if (user.role !== 'tenant') return '';
+  if (!mine.length) return `<div class="card mb-6"><h2 class="font-semibold">My rented property</h2><p class="text-sm text-slate-500 mt-1">You don't have an active rental yet.</p><button class="btn mt-3" onclick="show('rentals')">Browse available properties</button></div>`;
+  return `<h2 class="font-semibold mb-2">My rented property</h2><div class="grid md:grid-cols-2 gap-3 mb-6">${mine.map((r) => `
+    <div class="card border-l-4 border-indigo-500"><div class="text-lg font-bold">${esc(r.property?.name)}</div>
+      <p class="text-sm text-slate-500">${esc(r.property?.address)}</p>
+      <p class="mt-2 text-sm"><b>Unit ${esc(r.unit)}</b> · ${money(r.rentAmount)}/month</p>
+      <p class="text-xs text-slate-500">Lease: ${r.startDate} → ${r.endDate || 'open-ended'}</p></div>`).join('')}</div>`;
+}
+let vacant = [];
+function pickUnit() { $('#rRent').value = $('#rUnit').selectedOptions[0]?.dataset.rent || ''; }
+function fillUnitSelect(force) {
+  const v = $('#rUnit').value, pid = $('#rProp').value;
+  $('#rUnit').innerHTML = vacant.filter((u) => u.property?._id === pid).map((u) => `<option value="${esc(u.name)}" data-rent="${u.rentAmount}">${esc(u.name)} – ${money(u.rentAmount)}</option>`).join('') || '<option value="">No vacant units</option>';
+  if (v && [...$('#rUnit').options].some((o) => o.value === v)) $('#rUnit').value = v;
+  if (force || !$('#rRent').value) pickUnit();
+}
+async function loadUnits() {
+  vacant = await api('/units/available');
+  $('#vList').innerHTML = vacant.map((u) => `
+    <div class="card"><b>${esc(u.property?.name)}</b><p class="text-xs text-slate-500">${esc(u.property?.address)}</p>
+      <p class="mt-2 text-sm">Unit <b>${esc(u.name)}</b></p>
+      <p class="text-lg font-semibold text-indigo-600">${money(u.rentAmount)}<span class="text-xs text-slate-400"> /month</span></p>
+      ${user.role === 'owner' ? `<button class="btn-s mt-2 text-red-600" onclick="removeUnit('${u._id}')">Remove unit</button>` : ''}
+    </div>`).join('') || '<p class="text-slate-500">No vacant units right now.</p>';
+  fillUnitSelect();
+}
+async function addUnit() {
+  try { await api('/units', { method: 'POST', body: { propertyId: $('#nProp').value, name: $('#nName').value, rentAmount: Number($('#nRent').value) } }); $('#nName').value = $('#nRent').value = $('#nErr').textContent = ''; }
+  catch (e) { $('#nErr').textContent = e.message; }
+}
+async function removeUnit(id) { if (confirm('Remove this unit?')) try { await api('/units/' + id, { method: 'DELETE' }); } catch (e) { alert(e.message); } }
+async function addRental() {
+  try {
+    await api('/rentals', { method: 'POST', body: { propertyId: $('#rProp').value, tenantId: $('#rTenant').value, unit: $('#rUnit').value,
+      rentAmount: Number($('#rRent').value), startDate: $('#rStart').value, endDate: $('#rEnd').value || undefined } });
+    $('#rRent').value = $('#rErr').textContent = '';
+  } catch (e) { $('#rErr').textContent = e.message; }
+}
+async function endRental(id) { if (confirm('End this rental?')) try { await api(`/rentals/${id}/end`, { method: 'POST' }); } catch (e) { alert(e.message); } }
+async function loadRentals() {
+  const list = await api('/rentals');
+  $('#rList').innerHTML = list.map((r) => `
+    <div class="card flex flex-wrap items-center justify-between gap-2">
+      <div><b>${esc(r.property?.name)} · ${esc(r.unit)}</b> ${badge(r.status)}
+        <p class="text-sm">${esc(r.tenant?.name || 'Removed user')} · ${money(r.rentAmount)}/month</p>
+        <p class="text-xs text-slate-500">${r.startDate} → ${r.endDate || 'open-ended'}</p></div>
+      ${user.role === 'owner' && r.status === 'Active' ? `<button class="btn-s" onclick="endRental('${r._id}')">End rental</button>` : ''}
+    </div>`).join('') || '<p class="text-slate-500">No rentals yet.</p>';
+}
+async function addUser() {
+  try {
+    await api('/users', { method: 'POST', body: { name: $('#uName').value, email: $('#uEmail').value, password: $('#uPass').value, role: $('#uRole').value } });
+    $('#uName').value = $('#uEmail').value = $('#uPass').value = $('#uErr').textContent = '';
+  } catch (e) { $('#uErr').textContent = e.message; }
+}
+async function removeUser(id, name) {
+  if (!confirm(`Remove ${name}? Their active rentals will end and upcoming bookings will be cancelled.`)) return;
+  try { await api('/users/' + id, { method: 'DELETE' }); } catch (e) { alert(e.message); }
+}
+async function loadUsers() {
+  const users = await api('/users'), v = $('#rTenant').value;
+  $('#rTenant').innerHTML = users.filter((u) => u.role === 'tenant').map((u) => `<option value="${u._id}">${esc(u.name)} (${esc(u.email)})</option>`).join('');
+  if (v) $('#rTenant').value = v;
+  $('#uList').innerHTML = users.map((u) => `
+    <div class="card flex items-center justify-between gap-2">
+      <div><b>${esc(u.name)}</b> <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 capitalize">${u.role}</span><p class="text-sm text-slate-500">${esc(u.email)}</p></div>
+      <button class="btn-s text-red-600" data-name="${esc(u.name)}" onclick="removeUser('${u._id}', this.dataset.name)">Remove</button>
+    </div>`).join('') || '<p class="text-slate-500">No staff or tenants yet.</p>';
+}
+
+/* ---- Public home page (visitors without an account) ---- */
+const CONTACT = { email: 'rentals@yourdomain.com', phone: '+91 98765 43210' }; // <- change to your real details
+const blank = (v) => v || '____________';
+const mailSubject = (p = {}) => `Rental enquiry – ${blank(p.property)}`;
+const mailBody = (p = {}) => `Hello,
+
+I would like to enquire about renting a property.
+
+Property: ${blank(p.property)}
+Unit: ${blank(p.unit)}
+Monthly rent: ₹ ${blank(p.rent)}
+Preferred move-in date: ____________
+Lease duration (months): ____________
+Number of occupants: ____________
+
+My details
+Name: ____________
+Phone: ____________
+Email: ____________
+
+Please let me know the next steps and when I can visit the property.
+
+Thank you,
+____________`;
+let pubSocket;
+function showHome() {
+  $('#auth').classList.add('hidden'); $('#public').classList.remove('hidden');
+  $('#cEmail').textContent = $('#cEmail').href = CONTACT.email; $('#cEmail').href = 'mailto:' + CONTACT.email;
+  $('#cPhone').textContent = CONTACT.phone; $('#cPhone').href = 'tel:' + CONTACT.phone.replace(/\s/g, '');
+  fillContact(); loadPublic();
+  if (!pubSocket) { pubSocket = io(); pubSocket.on('update', loadPublic); } // vacancy list updates live
+}
+function showLogin() { $('#public').classList.add('hidden'); $('#auth').classList.remove('hidden'); }
+function pubTab(t) { ['home', 'rentals'].forEach((x) => $('#pub-' + x).classList.toggle('hidden', x !== t)); }
+function toggleContact() { $('#contactPanel').classList.toggle('hidden'); }
+function fillContact(p) { $('#cSubject').value = mailSubject(p); $('#cBody').value = mailBody(p); }
+function enquire(b) {
+  fillContact({ property: b.dataset.p, unit: b.dataset.u, rent: Number(b.dataset.r).toLocaleString('en-IN') });
+  $('#contactPanel').classList.remove('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function openMail() { location.href = `mailto:${CONTACT.email}?subject=${encodeURIComponent($('#cSubject').value)}&body=${encodeURIComponent($('#cBody').value)}`; }
+async function copyMail() {
+  const text = `Subject: ${$('#cSubject').value}\n\n${$('#cBody').value}`;
+  try { await navigator.clipboard.writeText(text); } catch { $('#cBody').select(); document.execCommand('copy'); }
+  $('#copyBtn').textContent = 'Copied ✓'; setTimeout(() => ($('#copyBtn').textContent = 'Copy'), 1500);
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#contactWrap') && !e.target.closest('[data-enquire]')) $('#contactPanel').classList.add('hidden');
+});
+const pubCard = (u) => `
+  <div class="card"><b>${esc(u.property)}</b><p class="text-xs text-slate-500">${esc(u.address)}</p>
+    <p class="mt-2 text-sm">Unit <b>${esc(u.unit)}</b></p>
+    <p class="text-lg font-semibold text-indigo-600">${money(u.rentAmount)}<span class="text-xs text-slate-400"> /month</span></p>
+    <button data-enquire class="btn-s mt-2" data-p="${esc(u.property)}" data-u="${esc(u.unit)}" data-r="${u.rentAmount}" onclick="enquire(this)">Enquire about this unit</button>
+  </div>`;
+async function loadPublic() {
+  if (token && user) return;
+  try {
+    const list = await (await fetch('/api/public/units')).json();
+    $('#pubCount').textContent = list.length;
+    $('#pubFeatured').innerHTML = list.slice(0, 3).map(pubCard).join('') || '<p class="text-slate-500">No vacant units right now — contact us to be notified.</p>';
+    $('#pubAll').innerHTML = list.map(pubCard).join('') || '<p class="text-slate-500">No vacant units right now — contact us to be notified.</p>';
+  } catch (e) { console.error(e); }
+}
+
+if (token && user) start(); else showHome();
+</script>
+</body>
+</html>
