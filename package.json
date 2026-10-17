@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "build": "npm --prefix client install --include=dev && npm --prefix client run build",
+    "dev:client": "npm --prefix client run dev"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
