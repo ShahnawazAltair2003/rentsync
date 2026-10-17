@@ -7,8 +7,9 @@ const M = require('./models');
   await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/rental_platform');
   await Promise.all(Object.values(M).map((m) => m.deleteMany({})));
   const pw = await bcrypt.hash('password123', 10);
+  const ownerPw = await bcrypt.hash(process.env.OWNER_PASSWORD || 'password123', 10);
   const [owner, staff, tenant, tenant2] = await M.User.create([
-    { name: 'Olivia Owner', email: 'owner@demo.com', password: pw, role: 'owner' },
+    { name: process.env.OWNER_NAME || 'Olivia Owner', email: process.env.OWNER_EMAIL || 'owner@demo.com', password: ownerPw, role: 'owner' },
     { name: 'Sam Staff', email: 'staff@demo.com', password: pw, role: 'staff' },
     { name: 'Tina Tenant', email: 'tenant@demo.com', password: pw, role: 'tenant' },
     { name: 'Raj Tenant', email: 'tenant2@demo.com', password: pw, role: 'tenant' }
