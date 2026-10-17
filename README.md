@@ -9,6 +9,7 @@ Stack: Node.js + Express, MongoDB (Mongoose), Socket.IO (real-time), JWT auth, T
 4. `npm run seed`  (loads demo users, properties, amenities)
 5. `npm start` → open http://localhost:3000
 
+
 Demo logins (password `password123`): tenant@demo.com, staff@demo.com, owner@demo.com
 
 ## Public home page
@@ -28,3 +29,7 @@ Visitors who are not logged in see a Home page (Home / Rentals tabs, Login butto
 - `routes.js` – REST API (auth, maintenance, amenities, bookings, dashboard)
 - `seed.js` – demo data
 - `public/index.html` – responsive UI
+
+
+##Live Link
+ Live rendered URL > https://rentsync-215u.onrender.com/
