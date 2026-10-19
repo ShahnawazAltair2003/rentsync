@@ -2,6 +2,9 @@
 
 Stack: Node.js + Express, MongoDB (Mongoose), Socket.IO (real-time), JWT auth, Tailwind + vanilla JS frontend.
 
+## Document
+<ahref>https://docs.google.com/document/d/1d3gAvleYRMUOxAYS6JpbajCEEUdSjd_IvKfP0cp0XSI/edit?usp=sharing</a>
+
 ## Run locally
 1. Install Node.js 18+ and MongoDB (or create a free MongoDB Atlas cluster).
 2. `npm install`
